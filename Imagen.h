@@ -6,6 +6,9 @@
 
 
 #include <iostream>
+#include <stdlib.h> 
+#include <stdio.h> 
+#include <unistd.h>
 
 using namespace std;
 
@@ -22,7 +25,16 @@ class Imagen {
 
     Imagen(int, int);
 
+    int generarImagenAleatoria();
+    int mostrarImagen();
+    int procesarImagen();
+
     ~Imagen();
+
+
+    private:
+    int randomBetween0andX(int X);
+    int procesarPixel(int pixel);
 
 
 
