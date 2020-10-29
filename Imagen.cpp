@@ -12,9 +12,18 @@ Imagen::Imagen(int anch, int alt){
 	// dynamically allocate memory of size N for each row
 	for (int i = 0; i < alt; i++)
 		pixeles[i] = new int[anch];
-
-   // cout<<"El alto es: "<<this->alto<<" el ancho es: "<<this->ancho<<endl;
+    //inicializo la matriz 
+    for (int i = 0; i < alto; i++)
+        for (int j = 0; j < ancho; j++){
+            pixeles[i][j] = 0;
+        }
  
+}
+
+int** Imagen::getImagen(){
+
+    return this->pixeles;
+
 }
 
 int Imagen::generarImagenAleatoria(){
@@ -41,6 +50,24 @@ int Imagen::procesarImagen(){
     return 0;
 }
 
+int Imagen::sumarImagen(Imagen &imagen){
+    
+    int suma;
+    cout<<"Comienza la suma"<<endl;
+    for (int i = 0; i < alto; i++)
+        for (int j = 0; j < ancho; j++){
+            //suma= pixeles[i][j] +imagen.getImagen()[i][j];
+
+           // cout<<"sumando"<< pixeles[i][j]<<" con "<<imagen.getImagen()[i][j]<<" da: "<< suma <<endl;
+            pixeles[i][j] = sumaPixeles(pixeles[i][j] ,imagen.getImagen()[i][j]);
+        }
+  
+    cout<<"Termina la suma"<<endl;
+    return 0;
+}
+
+
+
 
 int Imagen::procesarPixel(int pixel){
     
@@ -48,6 +75,29 @@ int Imagen::procesarPixel(int pixel){
     return pixel/2 + 1;
 
 }
+
+//suma pixeles, devuelve un numero entre 0 y 255
+int Imagen::sumaPixeles(int &pixel1, int &pixel2) {
+
+    int suma= pixel1 + pixel2;
+
+    if (suma< 256) {
+        return suma;
+    }else{
+         return  suma -256;   
+    }
+
+}
+int Imagen::multiplicarImagen(float valor){
+
+     for (int i = 0; i < alto; i++)
+        for (int j = 0; j < ancho; j++){
+            pixeles[i][j] *= valor;
+        }
+        return 0;
+
+}
+
 
 int Imagen::mostrarImagen(){
 
