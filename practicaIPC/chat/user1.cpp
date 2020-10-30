@@ -72,7 +72,6 @@ int main()
 
 	// calling the signal function using signal type SIGUSER1 
 	signal(SIGUSR1, handler); 
-
 	while (1) { 
 		while (shmptr->status != Ready) 
 			continue; 

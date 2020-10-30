@@ -128,6 +128,7 @@ Imagen::~Imagen(){
 
 	    delete[] pixeles;
         
+        cout<<"Destructor called!!!!!"<<endl;
 
 
 }
