@@ -21,11 +21,16 @@
         }else{
              for (int i = 0 ;i<  v1.size(); i++) {
             
-                 this->imagen_aplanada->sumarImagen(v1[i]);
+                (*imagen_aplanada).sumarImagen(v1[i]);
+             //   cout<<" hola"<<endl;
+               // imagen_aplanada->mostrarImagen();
       
             }
-             this->imagen_aplanada->multiplicarImagen(1/cantidad_imagenes);
-              
+            float num=1/(float) cantidad_imagenes; 
+             this->imagen_aplanada->multiplicarImagen(num);
+               //cout<<" chaur"<<endl;
+                //imagen_aplanada->mostrarImagen();
+      
 
         return 0;
       
@@ -35,9 +40,9 @@
 
 
     }
-    Imagen ProcesadorImagenes::devolverImagen(){
+    Imagen* ProcesadorImagenes::devolverImagen(){
 
-        return *imagen_aplanada;
+        return imagen_aplanada;
 
     }
 

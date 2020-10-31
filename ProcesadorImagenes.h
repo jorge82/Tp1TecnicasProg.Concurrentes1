@@ -33,7 +33,7 @@ class ProcesadorImagenes {
     ProcesadorImagenes( int cant, int ancho, int alto);
 
     int aplanarImagenes(vector <Imagen> &v1);
-    Imagen devolverImagen();
+    Imagen* devolverImagen();
 
     ~ProcesadorImagenes();
 

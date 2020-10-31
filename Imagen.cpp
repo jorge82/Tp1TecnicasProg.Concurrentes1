@@ -7,7 +7,7 @@ Imagen::Imagen(int anch, int alt){
     this->ancho=anch;
     pixeles= new int*[alt];
      /* initialize random seed: */
-    srand (time(NULL));
+    //srand (time(NULL));
 
 	// dynamically allocate memory of size N for each row
 	for (int i = 0; i < alt; i++)

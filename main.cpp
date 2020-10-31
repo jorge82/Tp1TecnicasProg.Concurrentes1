@@ -96,11 +96,11 @@ int main(int argc, const char** argv) {
              shmptr->parent_pid = getppid(); 
             //signal(SIGUSR1, handler); 
             //signal(SIGUSR2, handler); 
-
+            srand (time(NULL)+i);
             Imagen Imagen(ancho, alto);
             Imagen.generarImagenAleatoria();
-            //Imagen.procesarImagen();
-            Imagen.mostrarImagen();
+            Imagen.procesarImagen();
+            //Imagen.mostrarImagen();
  
             string serial=Imagen.serializeImagen();
             int n = serial.length();
@@ -150,7 +150,7 @@ int main(int argc, const char** argv) {
          ProcesadorImagenes procesador(cant, ancho, alto);
          procesador.aplanarImagenes(imagenes);
 
-         procesador.devolverImagen().mostrarImagen();
+         procesador.devolverImagen()->mostrarImagen();
 
     cout<<" terminating"<<endl;
      shmdt(shmptr);
