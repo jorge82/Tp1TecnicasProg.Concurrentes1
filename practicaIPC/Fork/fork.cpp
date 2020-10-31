@@ -8,7 +8,47 @@
 #include <sys/shm.h>
 #include <string>
 
+#include <cstring>
+
+
+#include <signal.h> 
+
+#include <sys/types.h> 
+#include <sys/wait.h>
+
+  
+#define Recieved 2
+#define Ready 1 
+#define NotReady -1 
+#define Finished 3 
+
 using namespace std;
+
+struct memory { 
+    char buff[100]; 
+    int status, pid, parent_pid; 
+  
+};
+
+struct memory* shmptr; 
+void handler(int signum) 
+{ 
+    // if signum is SIGUSR1, then user 1 is receiving a message from user2 
+  
+    if (signum == SIGUSR1) { 
+        
+        cout<<" data recieved from child: "<<shmptr->buff<<endl<<endl;
+        shmptr->status = Recieved; 
+        
+    } 
+    if (signum == SIGUSR2) { 
+        cout<<endl<<"here!!"<<endl;
+         shmptr->status = Recieved; 
+         cout<<" changing status  "<<shmptr->status<<endl;
+     
+    }
+} 
+
 int main( int argc, char **argv){
    
      if (argc!=2){
@@ -30,53 +70,79 @@ int main( int argc, char **argv){
     int shmid= shmget(key, 1000, 0666|IPC_CREAT);
 
     // shamt para apuntar a la memoria compartida
-    char *str= (char*) shmat(shmid, (void*)0,0);
+   shmptr= (struct memory*) shmat(shmid, NULL,0);
 
+    
+    signal(SIGUSR1, handler); 
+    signal(SIGUSR2, handler); 
+    
+ 
   
-
+    shmptr->status = NotReady; 
 
     int parent;
 
      for (int i=0; i < cant; ++i)
     {
         if(fork()==0){
-            cout<<"child number "<<getpid()<<" from parent "<<getppid()<<endl;
-            char message[100]="helllo from child";
+
+             shmptr->pid = getpid(); 
+             shmptr->parent_pid = getppid(); 
+            signal(SIGUSR1, handler); 
+            signal(SIGUSR2, handler); 
+ 
+            
+            //cout<<"child number "<<getpid()<<" from parent "<<getppid()<<endl;
+            char message[100]="helllo from child ";
             
             char buf[5];
             sprintf(buf, "%d",i);
            
             strcat(message,buf); 
-            cout<<"mensaje: "<<message<<endl; 
+           // cout<<"mensaje: "<<message<<endl; 
                    
-            memcpy(str, message, sizeof(message));
-            //printf("data reaqd from memory : %s\n", str);
-             
-            shmdt(str);
-           sleep(1);
+            memcpy(shmptr->buff, message, sizeof(message));
 
+
+            shmptr->status = Ready; 
+            
+             kill(shmptr->parent_pid, SIGUSR1);
+
+            // while(shmptr->status!=Recieved){
+            //    // cout<<"waiting"<<endl;
+            // }
+            cout<<"finsihing process "<<i<<endl;
+            shmptr->status = NotReady; 
+            shmdt(shmptr);
             return 1;
-
         }    
             
     }
-         cout<<"child im your father: "<<getpid()<<endl;
 
 
-     for (int i=0; i < cant; ++i)
-    {
-      
-       printf("data reaqd from memory : %s\n", str);
-       sleep(1);
+    // int num=cant;
+    // while (num>0) { 
+        
+        
+    //      cout<<" father estatus is "<< shmptr->status<<endl;
+    //     if(shmptr->status == Ready) {
+    //         //cout<<"data reaqd from memory :"<< shmptr->buff<<endl;
+    //         kill(shmptr->pid, SIGUSR2);
+    //         num--;
             
-    }
 
+    //     }
+        
 
-    
-
-     
-
-     shmdt(str);
+    // }
+     cout << "Waiting childs to finishg" << endl;
+  // Need to wait for all
+  for(int i=0; i<cant; i++){
+    wait(NULL);
+    //cout << "Got " << i+1 << " done" << endl;
+  }
+   // cout<<" terminating"<<endl;
+     shmdt(shmptr);
      shmctl(shmid, IPC_RMID, NULL);
 
 

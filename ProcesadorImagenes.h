@@ -22,7 +22,7 @@ class ProcesadorImagenes {
 
     public:
 
-    vector <Imagen*> imagenes;
+  
 
     int cantidad_imagenes;
 
@@ -30,9 +30,9 @@ class ProcesadorImagenes {
 
 
 
-    ProcesadorImagenes(vector <Imagen*> &imagenes, int cant, int ancho, int alto);
+    ProcesadorImagenes( int cant, int ancho, int alto);
 
-    int aplanarImagenes();
+    int aplanarImagenes(vector <Imagen> &v1);
     Imagen devolverImagen();
 
     ~ProcesadorImagenes();

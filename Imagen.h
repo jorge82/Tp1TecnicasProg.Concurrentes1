@@ -31,6 +31,8 @@ class Imagen {
     int** getImagen();
     int sumarImagen(Imagen &imagen);
     int multiplicarImagen(float valor);
+    string serializeImagen();
+    int desSerializeImagen(string &serial);
 
     // Copy constructor
     Imagen(const Imagen& p2) {
@@ -61,6 +63,9 @@ class Imagen {
     int randomBetween0andX(int X);
     int procesarPixel(int pixel);
     int sumaPixeles(int &pixel1, int &pixel2 );
+    int getValueFromSerial(string &serial, int &pos);
+
+    
 
 
 

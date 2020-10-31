@@ -26,13 +26,51 @@ int** Imagen::getImagen(){
 
 }
 
-int Imagen::generarImagenAleatoria(){
+string Imagen::serializeImagen(){
 
+    string resp;
+
+        resp.append(to_string(ancho)+","+ to_string(alto)+",");
+
+     for (int i = 0; i < alto; i++)
+        for (int j = 0; j < ancho; j++){
+            resp.append(to_string(pixeles[i][j])+",");
+            
+        }
+        return resp;
+}
+
+
+
+int Imagen::desSerializeImagen(string &serial){
+
+    int pos=0;
+    int anch= getValueFromSerial(serial, pos);
+    int alt= getValueFromSerial(serial, pos);
+ 
+    for (int i = 0; i < alt; i++)
+    for (int j = 0; j < anch; j++){
+        pixeles[i][j] = getValueFromSerial(serial, pos);
+    }
+    return 0;      
+}
+
+int Imagen::getValueFromSerial(string &serial, int &pos){
+
+    string num;
+    string delimiter = ",";
+    auto end = serial.find(delimiter,pos);
+    string token = serial.substr(pos, end);
+    pos = end + delimiter.length();
+    return stoi(token);
+}
+
+
+int Imagen::generarImagenAleatoria(){
     int randomNumber;
     for (int i = 0; i < alto; i++)
         for (int j = 0; j < ancho; j++){
             randomNumber=randomBetween0andX(255);
-            //scout<<" el numero generado es: "<< randomNumber<<endl;
             pixeles[i][j] = randomNumber;
         }
     return 0;
@@ -56,9 +94,9 @@ int Imagen::sumarImagen(Imagen &imagen){
     cout<<"Comienza la suma"<<endl;
     for (int i = 0; i < alto; i++)
         for (int j = 0; j < ancho; j++){
-            //suma= pixeles[i][j] +imagen.getImagen()[i][j];
+          //  suma= pixeles[i][j] +imagen.getImagen()[i][j];
 
-           // cout<<"sumando"<< pixeles[i][j]<<" con "<<imagen.getImagen()[i][j]<<" da: "<< suma <<endl;
+            //cout<<"sumando"<< pixeles[i][j]<<" con "<<imagen.getImagen()[i][j]<<" da: "<< suma <<endl;
             pixeles[i][j] = sumaPixeles(pixeles[i][j] ,imagen.getImagen()[i][j]);
         }
   

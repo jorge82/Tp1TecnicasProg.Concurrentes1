@@ -2,32 +2,33 @@
 
 
 
- ProcesadorImagenes::ProcesadorImagenes(vector <Imagen*> &v1,  int cant , int ancho, int alto){
+ ProcesadorImagenes::ProcesadorImagenes(  int cant , int ancho, int alto){
 
      this->cantidad_imagenes=cant;
 
-    for (int i=0; i<v1.size(); i++) 
-        imagenes.push_back(v1[i]); 
+   
 
     this->imagen_aplanada= new Imagen( ancho, alto);
 
 
  }
 
-    int ProcesadorImagenes::aplanarImagenes(){
+    int ProcesadorImagenes::aplanarImagenes(vector <Imagen> &v1){
 
-        if(this->imagenes.size()==0){
+        if(v1.size()==0){
             cout<<"Error, no hay imagnes para procesar"<<endl;
             return -1;
         }else{
-             for (int i = 0 ;i<  imagenes.size(); i++) {
+             for (int i = 0 ;i<  v1.size(); i++) {
             
-                 this->imagen_aplanada->sumarImagen(*imagenes[i]);
+                 this->imagen_aplanada->sumarImagen(v1[i]);
       
             }
-             this->imagen_aplanada->multiplicarImagen(0.5);
+             this->imagen_aplanada->multiplicarImagen(1/cantidad_imagenes);
+              
 
         return 0;
+      
 
     }
 
