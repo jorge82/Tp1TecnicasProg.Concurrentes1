@@ -1,5 +1,6 @@
 #include "Imagen.h"
 #include "ProcesadorImagenes.h"
+#include "Logger.h"
 
 #include <string>
 #include <cstring>
@@ -20,10 +21,18 @@
 #define NotReady -1 
 #define Finished 3 
 
+#define BUFFSIZE 1000
+#define ERROR -1
+#define OK 0
+
+#include <chrono> 
+using namespace std::chrono; 
+
 using namespace std;
 
+
 struct memory { 
-    char buff[1000]; 
+    char buff[BUFFSIZE]; 
     int status, pid, parent_pid;  
 };
 
@@ -35,14 +44,28 @@ vector <Imagen> imagenes;
 
 Imagen imagen(8,8);
 
+Logger* logger=Logger::getLogger("Log.txt");
+string log;
+bool logToFile=true;
+
 void handler(int signum) 
 { 
     if (signum == SIGUSR1) { 
-        sleep(1);
         //cout<<" data recieved from child: "<<shmptr->buff<<endl<<endl;
         data_in=shmptr->buff;
         
         imagen.desSerializeImagen(data_in);
+        // Use auto keyword to avoid typing long 
+            // type definitions to get the timepoint 
+            // at this instant use function now() 
+            auto start = high_resolution_clock::now(); 
+        if(logToFile){
+
+            log= "Proceso padre recibe de " + to_string(shmptr->pid) + " la imagen " + data_in;
+            logger->writeToLogFile(log);
+  
+        }    
+
         imagen.mostrarImagen();
         imagenes.push_back(imagen);
         shmptr->status = Recieved;     
@@ -55,18 +78,35 @@ void handler(int signum)
 }
 
 int main(int argc, const char** argv) {
-    int alto=8;
-    int ancho=8;
+  
     
-    if (argc!=2){
-        cout<<"Falta ingresar el número de cámaras"<<endl;
-        return -1;
+    if (argc!=3){
+       perror ("Faltan argumentos. Debe ingresar N(ancho y alto de las imagenes) y C(numero de camaras)");
+       return ERROR;
     }
+    // Use auto keyword to avoid typing long 
+// type definitions to get the timepoint 
+// at this instant use function now() 
+auto start = high_resolution_clock::now(); 
+   
+
+    
+    
 
 
-    int cant= atoi(argv[1]);   
+    int n= atoi(argv[1]); 
+    int cant= atoi(argv[2]);   
+    int alto=n;
+    int ancho=n;
 
-    printf("--beginning of program\n");
+
+    
+
+
+    if(logToFile){
+        log= "Comienza el programa con " + to_string(cant) +" imagenes de " + to_string(n) + "x" +to_string(n)+ " pixeles";   ;
+        logger->writeToLogFile(log);
+    }
 
      //genero una clave unica
     key_t key= ftok("sharedMem", 65);
@@ -79,28 +119,39 @@ int main(int argc, const char** argv) {
 
     
     signal(SIGUSR1, handler); 
-    //signal(SIGUSR2, handler); 
+
     
- 
-  
+
     shmptr->status = NotReady; 
 
-    int parent;
+    int parent_pid, pid;
+
+    parent_pid=getpid();
 
 
-     for (int i=0; i < cant; ++i)
+    for (int i=0; i < cant; ++i)
     {
-        if(fork()==0){
+        pid=fork();
+        if(pid==0){
 
-             shmptr->pid = getpid(); 
-             shmptr->parent_pid = getppid(); 
+             int process_id= getpid();
+             shmptr->pid = process_id; 
+             shmptr->parent_pid = parent_pid; 
             //signal(SIGUSR1, handler); 
-            //signal(SIGUSR2, handler); 
+            
             srand (time(NULL)+i);
             Imagen Imagen(ancho, alto);
             Imagen.generarImagenAleatoria();
+            if(logToFile){
+                log= "Proceso id " + to_string(process_id) + " comienza a procesar su imagen";
+                logger->writeToLogFile(log);
+            }
             Imagen.procesarImagen();
-            //Imagen.mostrarImagen();
+              if(logToFile){
+                log= "Proceso id " + to_string(process_id) + " Termina de  procesar su imagen";
+                logger->writeToLogFile(log);
+            }
+            
  
             string serial=Imagen.serializeImagen();
             int n = serial.length();
@@ -112,102 +163,68 @@ int main(int argc, const char** argv) {
             // string to char array
             strcpy(char_array, serial.c_str());
 
+            if(logToFile){
+                log= "Process id " + to_string(process_id) + " envia la imagen procesada al padre :" + serial ;
+                logger->writeToLogFile(log);
+            }
 
-            //cout<<"iamgen a envia "<<serial.c_str()<<endl;
-            //cout<<"iamgen a envia 22222"<<char_array<<endl;
-            
-            
-         
-            //memset(shmptr->buff,' ', strlen(shmptr->buff));
-     
+
+    
             memcpy(shmptr->buff, char_array, sizeof(char_array));
-
 
             shmptr->status = Ready; 
             
             kill(shmptr->parent_pid, SIGUSR1);
 
-            cout<<"finsihing process "<<i<<endl;
+           
             shmptr->status = NotReady; 
             shmdt(shmptr);
-            return 1;
-        }    
+            if(logToFile){
+                log= "Process id " + to_string(process_id) + " termino";
+                logger->writeToLogFile(log);
+            }
+            return OK;
+        }else if (pid<0){
+            perror ("Error in creating child process");
+            return ERROR;
+
+        }     
             
     }
 
-
-
-
-
-
-       cout << "Waiting childs to finishg" << endl;
-        // Need to wait for all
-        for(int i=0; i<cant; i++){
-            wait(NULL);
-            cout << "Got " << i+1 << " done" << endl;
-        }
-
-         ProcesadorImagenes procesador(cant, ancho, alto);
-         procesador.aplanarImagenes(imagenes);
-
-         procesador.devolverImagen()->mostrarImagen();
-
-    cout<<" terminating"<<endl;
-     shmdt(shmptr);
-     shmctl(shmid, IPC_RMID, NULL);
-    // vector <Imagen> imagenes;
-    // int cant= atoi(argv[1]);
-
-    // for (int i; i<cant; i++){
-        
-    //     cout<<"Generando la imagen "<<i<<endl;
-    //     // Imagen *imagen= new Imagen(ancho, alto);
-    //     // imagen->generarImagenAleatoria();
-        
-    //     //imagenes.push_back(*(new Imagen(ancho, alto)));
-    //       imagenes.emplace_back(ancho,alto);
-
-        
-    // }
-    // for (int i; i<imagenes.size(); i++){
-    //     cout<<"Procesando la imagen "<<i<<endl;
-    //     imagenes[i].procesarImagen();
-    //     imagenes[i].mostrarImagen();
-
-    // }
-
-    // Imagen imagen(6, 8);
-
-    // imagen.generarImagenAleatoria();
-    // //imagen.mostrarImagen();
-    // //imagen.procesarImagen();
-    // imagen.mostrarImagen();
-    // string serial=imagen.serializeImagen();
-    // cout<<endl<<"imagen serializada"<<serial<<endl;
-
-    // imagen.desSerializeImagen(serial);
-    // imagen.mostrarImagen();
-
-    // Imagen imagen2(6, 8);
-
-    // imagen2.generarImagenAleatoria();
-    // //imagen2.mostrarImagen();
-    // imagen2.procesarImagen();
-    // imagen2.mostrarImagen();
-
-
-//    // imagen.sumarImagen(imagen2);
-//     //imagen.mostrarImagen();
-
+    if(logToFile){
+        log= "Process id " + to_string(pid) + " :esperando a los procesos hijos que terminen";
+        logger->writeToLogFile(log);
+    }
     
+    for(int i=0; i<cant; i++){
+        wait(NULL);
+        if(logToFile){
+        log= "Process id " + to_string(pid) + " :termino hijo " + to_string(i+1) + " de " + to_string(cant);
+        logger->writeToLogFile(log);
+         }   
+    }
 
-  
-//     imagenes.push_back(&imagen2);
 
-    // ProcesadorImagenes procesador(imagenes,cant, ancho, alto);
-    // procesador.aplanarImagenes();
+    ProcesadorImagenes procesador(cant, ancho, alto);
+    if(logToFile){
+        log= "Se comienza el aplanado de imagenes ";
+        logger->writeToLogFile(log);
+    }
 
-    // procesador.devolverImagen().mostrarImagen();
+    procesador.aplanarImagenes(imagenes);
+    procesador.devolverImagen()->mostrarImagen();
 
-    return 0;
+     
+    shmdt(shmptr);
+    shmctl(shmid, IPC_RMID, NULL);
+
+    // After function call 
+    auto stop = high_resolution_clock::now();
+    auto duration = duration_cast<seconds>(stop - start); 
+    if(logToFile){
+        log= "Se termina el programa , tiempo de ejecucion: " + to_string(duration.count())+ " segundos";
+        logger->writeToLogFile(log);
+    }
+    return OK;
 }
