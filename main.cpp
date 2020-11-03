@@ -14,7 +14,6 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 
-
   
 #define Recieved 2
 #define Ready 1 
@@ -31,52 +30,23 @@ using namespace std::chrono;
 using namespace std;
 
 
+bool logToFile=true;
+
+
 struct memory { 
     char buff[BUFFSIZE]; 
-    int status, pid, parent_pid;  
+    int status,status2, pid, parent_pid;  
 };
 
 struct memory* shmptr; 
-
 string data_in;
-
 vector <Imagen> imagenes;
-
 Imagen imagen(8,8);
-
 Logger* logger=Logger::getLogger("Log.txt");
 string log;
-bool logToFile=true;
+int status;
 
-void handler(int signum) 
-{ 
-    if (signum == SIGUSR1) { 
-        //cout<<" data recieved from child: "<<shmptr->buff<<endl<<endl;
-        data_in=shmptr->buff;
-        
-        imagen.desSerializeImagen(data_in);
-        // Use auto keyword to avoid typing long 
-            // type definitions to get the timepoint 
-            // at this instant use function now() 
-            auto start = high_resolution_clock::now(); 
-        if(logToFile){
-
-            log= "Proceso padre recibe de " + to_string(shmptr->pid) + " la imagen " + data_in;
-            logger->writeToLogFile(log);
-  
-        }    
-
-        imagen.mostrarImagen();
-        imagenes.push_back(imagen);
-        shmptr->status = Recieved;     
-    } 
-    if (signum == SIGUSR2) { 
-        cout<<endl<<"here!!"<<endl;
-         shmptr->status = Recieved; 
-         cout<<" changing status  "<<shmptr->status<<endl;
-    }
-}
-
+void handler(int signum);
 int main(int argc, const char** argv) {
   
     
@@ -84,23 +54,14 @@ int main(int argc, const char** argv) {
        perror ("Faltan argumentos. Debe ingresar N(ancho y alto de las imagenes) y C(numero de camaras)");
        return ERROR;
     }
-    // Use auto keyword to avoid typing long 
-// type definitions to get the timepoint 
-// at this instant use function now() 
-auto start = high_resolution_clock::now(); 
+    
+    // comienzzo a contar el tiempo
+    auto start = high_resolution_clock::now(); 
    
-
-    
-    
-
-
     int n= atoi(argv[1]); 
     int cant= atoi(argv[2]);   
     int alto=n;
     int ancho=n;
-
-
-    
 
 
     if(logToFile){
@@ -109,36 +70,46 @@ auto start = high_resolution_clock::now();
     }
 
      //genero una clave unica
-    key_t key= ftok("sharedMem", 65);
+    key_t key= ftok(".", 65);
+
+    if ( key <= 0 ) {
+        perror ("Error ftok");
+       return ERROR;
+    }
 
     //shmget devuelve un indentiifcador unico
     int shmid= shmget(key, 10000, 0666|IPC_CREAT);
 
+    if ( shmid <= 0 ) {
+        perror ("Error shmget");
+       return ERROR;
+    }
+
     // shamt para apuntar a la memoria compartida
     shmptr= (struct memory*) shmat(shmid, NULL,0);
+
+     if ( shmptr==  (void*) -1 ) {
+        perror ("Error shmat");
+       return ERROR;
+    }
 
     
     signal(SIGUSR1, handler); 
 
-    
-
-    shmptr->status = NotReady; 
+    status = Ready;
 
     int parent_pid, pid;
 
     parent_pid=getpid();
+    shmptr->parent_pid = parent_pid; 
 
 
     for (int i=0; i < cant; ++i)
     {
         pid=fork();
         if(pid==0){
-
              int process_id= getpid();
-             shmptr->pid = process_id; 
-             shmptr->parent_pid = parent_pid; 
-            //signal(SIGUSR1, handler); 
-            
+            //seteo un semilla distinta para numero random
             srand (time(NULL)+i);
             Imagen Imagen(ancho, alto);
             Imagen.generarImagenAleatoria();
@@ -151,16 +122,12 @@ auto start = high_resolution_clock::now();
                 log= "Proceso id " + to_string(process_id) + " Termina de  procesar su imagen";
                 logger->writeToLogFile(log);
             }
-            
  
             string serial=Imagen.serializeImagen();
+            //Tamaño de la imagen
             int n = serial.length();
- 
-            // declaring character array
             char char_array[n + 1];
-        
-            // copying the contents of the
-            // string to char array
+            // string A char array
             strcpy(char_array, serial.c_str());
 
             if(logToFile){
@@ -168,16 +135,13 @@ auto start = high_resolution_clock::now();
                 logger->writeToLogFile(log);
             }
 
-
-    
+            while(status != Ready){
+                //cout<<"Process "<< process_id<<" waiting"<<endl;
+            }    
+            status = NotReady; 
+            shmptr->pid = process_id; 
             memcpy(shmptr->buff, char_array, sizeof(char_array));
-
-            shmptr->status = Ready; 
-            
-            kill(shmptr->parent_pid, SIGUSR1);
-
-           
-            shmptr->status = NotReady; 
+            kill(parent_pid, SIGUSR1);
             shmdt(shmptr);
             if(logToFile){
                 log= "Process id " + to_string(process_id) + " termino";
@@ -196,9 +160,10 @@ auto start = high_resolution_clock::now();
         log= "Process id " + to_string(pid) + " :esperando a los procesos hijos que terminen";
         logger->writeToLogFile(log);
     }
-    
+    //Espero  que todos los hijos terminen
     for(int i=0; i<cant; i++){
         wait(NULL);
+
         if(logToFile){
         log= "Process id " + to_string(pid) + " :termino hijo " + to_string(i+1) + " de " + to_string(cant);
         logger->writeToLogFile(log);
@@ -215,11 +180,10 @@ auto start = high_resolution_clock::now();
     procesador.aplanarImagenes(imagenes);
     procesador.devolverImagen()->mostrarImagen();
 
-     
     shmdt(shmptr);
     shmctl(shmid, IPC_RMID, NULL);
 
-    // After function call 
+    // Calculo la duracion de ejecuciòn
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<seconds>(stop - start); 
     if(logToFile){
@@ -227,4 +191,20 @@ auto start = high_resolution_clock::now();
         logger->writeToLogFile(log);
     }
     return OK;
+}
+void handler(int signum) 
+{ 
+    if (signum == SIGUSR1) { 
+        data_in=shmptr->buff;
+        imagen.desSerializeImagen(data_in);
+        
+        if(logToFile){
+            log= "Proceso padre recibe de " + to_string(shmptr->pid) + " la imagen " + data_in;
+            logger->writeToLogFile(log);
+        }    
+
+        imagen.mostrarImagen();
+        imagenes.push_back(imagen);
+        status = Ready;
+    } 
 }

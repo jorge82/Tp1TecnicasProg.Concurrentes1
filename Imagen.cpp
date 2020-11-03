@@ -78,20 +78,20 @@ int Imagen::generarImagenAleatoria(){
 
 int Imagen::procesarImagen(){
     int randomSeconds=randomBetween0andX(10);
-    cout<<"Comenzo a procesar "<< randomSeconds<<" segundos"<<endl;
+    //cout<<"Comenzo a procesar "<< randomSeconds<<" segundos"<<endl;
     for (int i = 0; i < alto; i++)
         for (int j = 0; j < ancho; j++){
             pixeles[i][j] = procesarPixel(pixeles[i][j]);
         }
     sleep(randomSeconds);
-    cout<<"Termino de procesar"<<endl;
+   // cout<<"Termino de procesar"<<endl;
     return 0;
 }
 
 int Imagen::sumarImagen(Imagen &imagen){
     
     int suma;
-    cout<<"Comienza la suma"<<endl;
+    //cout<<"Comienza la suma"<<endl;
     for (int i = 0; i < alto; i++)
         for (int j = 0; j < ancho; j++){
           //  suma= pixeles[i][j] +imagen.getImagen()[i][j];
@@ -100,7 +100,7 @@ int Imagen::sumarImagen(Imagen &imagen){
             pixeles[i][j] = sumaPixeles(pixeles[i][j] ,imagen.getImagen()[i][j]);
         }
   
-    cout<<"Termina la suma"<<endl;
+    //cout<<"Termina la suma"<<endl;
     return 0;
 }
 
@@ -166,7 +166,7 @@ Imagen::~Imagen(){
 
 	    delete[] pixeles;
         
-        cout<<"Destructor called!!!!!"<<endl;
+        //cout<<"Destructor called!!!!!"<<endl;
 
 
 }

@@ -45,7 +45,7 @@ class Imagen {
         for (int j = 0; j < ancho; j++){
             pixeles[i][j] = p2.pixeles[i][j];
         }
-        cout << ">> Copy constructor called.\n";
+        //cout << ">> Copy constructor called.\n";
     }
 
 
