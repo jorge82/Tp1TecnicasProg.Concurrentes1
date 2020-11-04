@@ -20,7 +20,7 @@
 #define NotReady -1 
 #define Finished 3 
 
-#define BUFFSIZE 1000000
+#define BUFFSIZE 10000
 #define ERROR -1
 #define OK 0
 
@@ -33,20 +33,8 @@ using namespace std;
 bool logToFile=true;
 
 
-struct memory { 
-    char buff[BUFFSIZE]; 
-    int status,status2, pid, parent_pid;  
-};
 
-struct memory* shmptr; 
-string data_in;
-vector <Imagen> imagenes;
-Imagen imagen(8,8);
-Logger* logger=Logger::getLogger("Log.txt");
-string log;
-int status;
 
-void handler(int signum);
 int main(int argc, const char** argv) {
   
     
@@ -62,6 +50,20 @@ int main(int argc, const char** argv) {
     int cant= atoi(argv[2]);   
     int alto=n;
     int ancho=n;
+
+
+struct memory { 
+    char buff[BUFFSIZE]; 
+    int status,status2, pid, parent_pid;  
+};
+
+struct memory* shmptr; 
+string data_in;
+vector <Imagen> imagenes;
+Imagen imagen(ancho,alto);
+Logger* logger=Logger::getLogger("Log.txt");
+string log;
+int status;
 
 
     if(logToFile){
@@ -94,7 +96,6 @@ int main(int argc, const char** argv) {
     }
 
     
-    signal(SIGUSR1, handler); 
 
     status = Ready;
 
@@ -125,8 +126,8 @@ int main(int argc, const char** argv) {
  
             string serial=Imagen.serializeImagen();
             //Tamaño de la imagen
-            int n = serial.length();
-            char char_array[n + 1];
+            int len = serial.length();
+            char char_array[len + 1];
             // string A char array
             strcpy(char_array, serial.c_str());
 
@@ -141,7 +142,7 @@ int main(int argc, const char** argv) {
             status = NotReady; 
             shmptr->pid = process_id; 
             memcpy(shmptr->buff, char_array, sizeof(char_array));
-            kill(parent_pid, SIGUSR1);
+            
             shmdt(shmptr);
             if(logToFile){
                 log= "Process id " + to_string(process_id) + " termino";
@@ -163,6 +164,19 @@ int main(int argc, const char** argv) {
     //Espero  que todos los hijos terminen
     for(int i=0; i<cant; i++){
         wait(NULL);
+
+
+        data_in=shmptr->buff;
+        imagen.desSerializeImagen(data_in);
+        
+        if(logToFile){
+            log= "Proceso padre recibe de " + to_string(shmptr->pid) + " la imagen " + data_in;
+            logger->writeToLogFile(log);
+        }    
+
+        //imagen.mostrarImagen();
+        imagenes.push_back(imagen);
+        status = Ready;
 
         if(logToFile){
         log= "Process id " + to_string(pid) + " :termino hijo " + to_string(i+1) + " de " + to_string(cant);
@@ -191,20 +205,4 @@ int main(int argc, const char** argv) {
         logger->writeToLogFile(log);
     }
     return OK;
-}
-void handler(int signum) 
-{ 
-    if (signum == SIGUSR1) { 
-        data_in=shmptr->buff;
-        imagen.desSerializeImagen(data_in);
-        
-        if(logToFile){
-            log= "Proceso padre recibe de " + to_string(shmptr->pid) + " la imagen " + data_in;
-            logger->writeToLogFile(log);
-        }    
-
-        imagen.mostrarImagen();
-        imagenes.push_back(imagen);
-        status = Ready;
-    } 
 }
