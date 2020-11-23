@@ -33,13 +33,10 @@ struct memory {
 struct memory* shmptr; 
 void handler(int signum) 
 { 
-    // if signum is SIGUSR1, then user 1 is receiving a message from user2 
-  
     if (signum == SIGUSR1) { 
         
         cout<<" data recieved from child: "<<shmptr->buff<<endl<<endl;
-        shmptr->status = Recieved; 
-        
+        shmptr->status = Recieved;     
     } 
     if (signum == SIGUSR2) { 
         cout<<endl<<"here!!"<<endl;
@@ -92,14 +89,14 @@ int main( int argc, char **argv){
             signal(SIGUSR2, handler); 
  
             
-            //cout<<"child number "<<getpid()<<" from parent "<<getppid()<<endl;
+            
             char message[100]="helllo from child ";
             
             char buf[5];
             sprintf(buf, "%d",i);
            
             strcat(message,buf); 
-           // cout<<"mensaje: "<<message<<endl; 
+        
                    
             memcpy(shmptr->buff, message, sizeof(message));
 
@@ -108,9 +105,7 @@ int main( int argc, char **argv){
             
              kill(shmptr->parent_pid, SIGUSR1);
 
-            // while(shmptr->status!=Recieved){
-            //    // cout<<"waiting"<<endl;
-            // }
+       
             cout<<"finsihing process "<<i<<endl;
             shmptr->status = NotReady; 
             shmdt(shmptr);
