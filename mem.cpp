@@ -14,6 +14,9 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 
+#include <mutex>          // std::mutex
+
+std::mutex mtx;           // mutex for critical section
   
 #define Recieved 2
 #define Ready 1 
@@ -28,15 +31,29 @@ using namespace std::chrono;
 
 using namespace std;
 
+#include <mutex>  
 
+#include <csignal>
 
 /*  
     Ejecucion: /procesadorSharedMem  <tam_imagen> <num_camaras>
 */
 /* false si no se quiere log*/
-bool logToFile=true;
+ struct memory { 
+        char buff[BUFFSIZE]; 
+        int pid, parent_pid;  
+    };
+bool logToFile=false;
+  struct memory* shmptr; 
+   int shmid;
+void signalHandler( int signum ) {
+ 
+    printf("\n Clearing shared mamery .  Ctrl+C pressed \n"); 
+    //shmdt(shmptr);
+    //shmctl(shmid, IPC_RMID, NULL);
 
-
+   exit(signum);  
+}
 int main(int argc, const char** argv) {
   
     if (argc!=3){
@@ -53,12 +70,9 @@ int main(int argc, const char** argv) {
     int ancho=n;
 
 
-    struct memory { 
-        char buff[BUFFSIZE]; 
-        int pid, parent_pid;  
-    };
+   
 
-    struct memory* shmptr; 
+  
     string data_in;
     vector <Imagen> imagenes;
     Imagen imagen(ancho,alto);
@@ -81,7 +95,7 @@ int main(int argc, const char** argv) {
     }
 
     //shmget devuelve un indentiifcador unico
-    int shmid= shmget(key, 10000, 0666|IPC_CREAT);
+     shmid= shmget(key, 10000, 0666|IPC_CREAT);
 
     if ( shmid <= 0 ) {
         perror ("Error shmget");
@@ -103,10 +117,13 @@ int main(int argc, const char** argv) {
     parent_pid=getpid();
     shmptr->parent_pid = parent_pid; 
 
+   
+
     int pid;
     for (int i=0; i < cant; ++i)
     {
         pid=fork();
+         
         if(pid==0){
              int process_id= getpid();
             //seteo un semilla distinta para numero random
@@ -135,11 +152,13 @@ int main(int argc, const char** argv) {
                 log= "Process id " + to_string(process_id) + " envia la imagen procesada al padre :" + serial ;
                 logger->writeToLogFile(log);
             }
+            
+            mtx.lock();    
 
-            while(status != Ready){
+            // while(status != Ready){
 
-            }    
-            status = NotReady; 
+            // }    
+            //status = NotReady; 
             shmptr->pid = process_id; 
             memcpy(shmptr->buff, char_array, sizeof(char_array));
             shmdt(shmptr);
@@ -155,6 +174,7 @@ int main(int argc, const char** argv) {
             
     }
 
+     signal(SIGINT, signalHandler);
     if(logToFile){
         log= "Process id " + to_string(parent_pid) + " :esperando a los procesos hijos que terminen";
         logger->writeToLogFile(log);
@@ -163,6 +183,8 @@ int main(int argc, const char** argv) {
     for(int i=0; i<cant; i++){
         wait(NULL);
         data_in=shmptr->buff;
+
+        mtx.unlock();
         imagen.desSerializeImagen(data_in);
         
         if(logToFile){
@@ -172,7 +194,7 @@ int main(int argc, const char** argv) {
     
         //imagen.mostrarImagen();
         imagenes.push_back(imagen);
-        status = Ready;
+        //status = Ready;
 
         if(logToFile){
         log= "Process id " + to_string(parent_pid) + " :termino hijo " + to_string(i+1) + " de " + to_string(cant);
