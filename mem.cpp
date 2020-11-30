@@ -14,15 +14,9 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 
-#include <mutex>          // std::mutex
 
-std::mutex mtx;           // mutex for critical section
   
-#define Recieved 2
-#define Ready 1 
-#define NotReady -1 
-#define Finished 3 
-#define BUFFSIZE 1000
+
 #define ERROR -1
 #define OK 0
 
@@ -31,7 +25,7 @@ using namespace std::chrono;
 
 using namespace std;
 
-#include <mutex>  
+
 
 #include <csignal>
 
@@ -39,21 +33,54 @@ using namespace std;
     Ejecucion: /procesadorSharedMem  <tam_imagen> <num_camaras>
 */
 /* false si no se quiere log*/
- struct memory { 
-        char buff[BUFFSIZE]; 
-        int pid, parent_pid;  
-    };
+
+
 bool logToFile=false;
-  struct memory* shmptr; 
-   int shmid;
+
+
+int shmid;
+int (*mem);
+
 void signalHandler( int signum ) {
  
     printf("\n Clearing shared mamery .  Ctrl+C pressed \n"); 
-    //shmdt(shmptr);
-    //shmctl(shmid, IPC_RMID, NULL);
+    shmdt(mem);
+    shmctl(shmid, IPC_RMID, NULL);
 
    exit(signum);  
-}
+ }
+int copyToMem( int *mem, int posicion , vector<int> &vector){
+
+     
+    //cout<<"vector size: "<<vec.size()<<endl;
+    for(int i=0; i<vector.size(); i++){
+        //cout<<"!!!valor copiado a memoria "<<vector[i]<<" en la posicion " <<posicion +i<<endl;
+        mem[posicion +i]= vector.at(i);  
+    }
+    return 0;
+} 
+
+// int mostrarMem( int *mem, int posicion, int tam){
+//     cout<<"Imagen recibida "<<endl;
+//     for(int i=0; i<tam; i++){
+//        cout<<" "<< mem[posicion+i];
+//     }
+
+//     cout<<endl;
+//     return 0;
+
+// } 
+
+vector<int> copyToVector( int *mem, int posicion, int tam){
+
+    //cout<<"copiando desde las posicion: "<< posicion<<" el tamaño: "<<tam<<endl;
+    vector<int> aux;
+    for(int i=0; i<tam; i++){
+        // cout<<"copiando en la posicion: "<< posicion +i <<" el valor: "<<mem[posicion+i]<<endl;
+        aux.push_back(mem[posicion+i]);
+    }
+    return aux;
+} 
 int main(int argc, const char** argv) {
   
     if (argc!=3){
@@ -70,15 +97,11 @@ int main(int argc, const char** argv) {
     int ancho=n;
 
 
-   
-
-  
-    string data_in;
     vector <Imagen> imagenes;
-    Imagen imagen(ancho,alto);
+
     Logger* logger=Logger::getLogger("Log.txt");
     string log;
-    int status;
+
 
 
     if(logToFile){
@@ -93,43 +116,48 @@ int main(int argc, const char** argv) {
         perror ("Error ftok");
        return ERROR;
     }
+  
 
-    //shmget devuelve un indentiifcador unico
-     shmid= shmget(key, 10000, 0666|IPC_CREAT);
+    //shmget devuelve un indentifcador unico
+    /* cada imagen va estar representador por un serie de numeros enteros empezando por el ancho y alto
+    ejemplo: 2 2 10 15 2 3  ;  donde representa una matriz de 2x2 con valores: |10 15 |
+                                                                               | 2  3 |
+    */
+    int bytes_requeridos=(alto*ancho +2)* cant*sizeof(int);
+    shmid= shmget(key, bytes_requeridos, 0666|IPC_CREAT);
 
     if ( shmid <= 0 ) {
         perror ("Error shmget");
        return ERROR;
     }
 
-    // shamt para apuntar a la memoria compartida
-    shmptr= (struct memory*) shmat(shmid, NULL,0);
 
-     if ( shmptr==  (void*) -1 ) {
+    // shamt para apuntar a la memoria compartida
+
+   mem= (int*) shmat(shmid, 0,0);
+
+     if ( mem==  (void*) -1 ) {
         perror ("Error shmat");
        return ERROR;
     }
 
-    status = Ready;
-
     int parent_pid;
-
     parent_pid=getpid();
-    shmptr->parent_pid = parent_pid; 
-
    
-
     int pid;
     for (int i=0; i < cant; ++i)
     {
+        //genero procesos hijos
         pid=fork();
          
         if(pid==0){
-             int process_id= getpid();
+            int process_id= getpid();
             //seteo un semilla distinta para numero random
             srand (time(NULL)+i);
             Imagen Imagen(ancho, alto);
+           
             Imagen.generarImagenAleatoria();
+          
             if(logToFile){
                 log= "Proceso id " + to_string(process_id) + " comienza a procesar su imagen";
                 logger->writeToLogFile(log);
@@ -141,34 +169,33 @@ int main(int argc, const char** argv) {
             }
             Imagen.mostrarImagen();
 
-            string serial=Imagen.serializeImagen();
-            //Tamaño de la imagen
-            int len = serial.length();
-            char char_array[len + 1];
-            // string A char array
-            strcpy(char_array, serial.c_str());
+
+          
 
             if(logToFile){
-                log= "Process id " + to_string(process_id) + " envia la imagen procesada al padre :" + serial ;
+                log= "Process id " + to_string(process_id) + " envia la imagen procesada al padre" ;
                 logger->writeToLogFile(log);
             }
             
-            mtx.lock();    
+       
+            int tam_imagen= sizeof(Imagen.getImagenVector());
+            vector<int> vec= Imagen.getImagenVector();
+         
+            
+            int tam_pixeles= alto*ancho +2;  //se le suma 2 para incluir el ancho y el alto
 
-            // while(status != Ready){
+            //se copia a memoria desde la posicion i*tam_pixeles 
+            copyToMem( mem, i*tam_pixeles, vec);
+            //dehace el vinvulo de la memoria compartida al proceso
+            shmdt(mem);
 
-            // }    
-            //status = NotReady; 
-            shmptr->pid = process_id; 
-            memcpy(shmptr->buff, char_array, sizeof(char_array));
-            shmdt(shmptr);
             if(logToFile){
                 log= "Process id " + to_string(process_id) + " termino";
                 logger->writeToLogFile(log);
             }
             return OK;
         }else if (pid<0){
-            perror ("Error in creating child process");
+            perror ("Error al crear procesos hijos");
             return ERROR;
         }     
             
@@ -176,30 +203,26 @@ int main(int argc, const char** argv) {
 
      signal(SIGINT, signalHandler);
     if(logToFile){
-        log= "Process id " + to_string(parent_pid) + " :esperando a los procesos hijos que terminen";
+        log= "Proceso id " + to_string(parent_pid) + " :esperando a los procesos hijos que terminen";
         logger->writeToLogFile(log);
     }
     //Espero  que todos los hijos terminen
     for(int i=0; i<cant; i++){
         wait(NULL);
-        data_in=shmptr->buff;
+    }
 
-        mtx.unlock();
-        imagen.desSerializeImagen(data_in);
-        
-        if(logToFile){
-            log= "Proceso padre recibe de " + to_string(shmptr->pid) + " la imagen " + data_in;
-            logger->writeToLogFile(log);
-        }    
-    
-        //imagen.mostrarImagen();
+    int tam_pixeles= alto*ancho +2;
+
+    //leo la meoria compartida y guardo las imagenes en un vector para luego procesarlas
+    for(int i=0; i<cant; i++){
+
+        vector<int> vect= copyToVector( mem, i*tam_pixeles,n*n+2);
+        Imagen imagen(ancho,alto);
+        imagen.getImagenFromVector(vect);
+        cout<<"Imagen recibida!!!!!!1"<<endl;
+        imagen.mostrarImagen();
         imagenes.push_back(imagen);
-        //status = Ready;
-
-        if(logToFile){
-        log= "Process id " + to_string(parent_pid) + " :termino hijo " + to_string(i+1) + " de " + to_string(cant);
-        logger->writeToLogFile(log);
-         }   
+       
     }
 
 
@@ -213,7 +236,7 @@ int main(int argc, const char** argv) {
     cout<<"Imagen final"<<endl;
     procesador.devolverImagen()->mostrarImagen();
 
-    shmdt(shmptr);
+    shmdt(mem);
     shmctl(shmid, IPC_RMID, NULL);
 
     // Calculo la duracion de ejecuciòn

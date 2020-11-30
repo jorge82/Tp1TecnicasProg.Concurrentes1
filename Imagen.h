@@ -6,16 +6,14 @@
 #include <stdio.h> 
 #include <unistd.h>
 #include <time.h> 
+#include <vector>
 
 using namespace std;
 
 class Imagen {
 
     int ancho, alto;
-
-    int** pixeles;
-
-
+    vector<int> vector_pixeles;
 
     public:
 
@@ -24,30 +22,20 @@ class Imagen {
     int mostrarImagen();
     int procesarImagen();
     int** getImagen();
+
+   vector<int> getImagenVector();
+
     int sumarImagen(Imagen &imagen);
     int multiplicarImagen(float valor);
-    string serializeImagen();
-    int desSerializeImagen(string &serial);
+    int getImagenFromVector(vector<int> &vect);
 
     // Copy constructor
     Imagen(const Imagen& p2) {
         ancho= p2.ancho;
         alto = p2.alto;
-        pixeles=p2.pixeles;
-         pixeles= new int*[alto];
-     
-
-	// dynamically allocate memory of size N for each row
-	for (int i = 0; i < alto; i++)
-		pixeles[i] = new int[ancho];
-    //inicializo la matriz 
-    for (int i = 0; i < alto; i++)
-        for (int j = 0; j < ancho; j++){
-            pixeles[i][j] = p2.pixeles[i][j];
-        }
-        //cout << ">> Copy constructor called.\n";
+        vector_pixeles=p2.vector_pixeles;
+	
     }
-
 
 
     ~Imagen();

@@ -12,12 +12,13 @@ int ProcesadorImagenes::aplanarImagenes(vector <Imagen> &v1){
         cout<<"Error, no hay imagnes para procesar"<<endl;
         return -1;
     }else{
+         
             for (int i = 0 ;i<  v1.size(); i++) {
-        
+               
             (*imagen_aplanada).sumarImagen(v1[i]);
 
         }
-        float num=1/(float) cantidad_imagenes; 
+            float num=1/(float) cantidad_imagenes; 
             this->imagen_aplanada->multiplicarImagen(num);
     return 0;
     }   

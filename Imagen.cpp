@@ -5,55 +5,21 @@ Imagen::Imagen(int anch, int alt){
 
     this->alto=alt;
     this->ancho=anch;
-    pixeles= new int*[alt];
-     /* initialize random seed: */
-    //srand (time(NULL));
+   
+    vector_pixeles.push_back(ancho); 
+    vector_pixeles.push_back(alto); 
 
-	// dynamically allocate memory of size N for each row
-	for (int i = 0; i < alt; i++)
-		pixeles[i] = new int[anch];
-    //inicializo la matriz 
-    for (int i = 0; i < alto; i++)
-        for (int j = 0; j < ancho; j++){
-            pixeles[i][j] = 0;
-        }
- 
-}
-
-int** Imagen::getImagen(){
-
-    return this->pixeles;
+    for (int i = 0; i < alto*ancho; i++) 
+        vector_pixeles.push_back(0); 
 
 }
 
-string Imagen::serializeImagen(){
+vector<int> Imagen::getImagenVector(){
 
-    string resp;
+    return vector_pixeles;
 
-        resp.append(to_string(ancho)+","+ to_string(alto)+",");
-
-     for (int i = 0; i < alto; i++)
-        for (int j = 0; j < ancho; j++){
-            resp.append(to_string(pixeles[i][j])+",");
-            
-        }
-        return resp;
 }
 
-
-
-int Imagen::desSerializeImagen(string &serial){
-
-    int pos=0;
-    int anch= getValueFromSerial(serial, pos);
-    int alt= getValueFromSerial(serial, pos);
- 
-    for (int i = 0; i < alt; i++)
-    for (int j = 0; j < anch; j++){
-        pixeles[i][j] = getValueFromSerial(serial, pos);
-    }
-    return 0;      
-}
 
 int Imagen::getValueFromSerial(string &serial, int &pos){
 
@@ -68,39 +34,46 @@ int Imagen::getValueFromSerial(string &serial, int &pos){
 
 int Imagen::generarImagenAleatoria(){
     int randomNumber;
-    for (int i = 0; i < alto; i++)
-        for (int j = 0; j < ancho; j++){
-            randomNumber=randomBetween0andX(255);
-            pixeles[i][j] = randomNumber;
-        }
+  
+
+    for (int i=0; i<alto*ancho; i++){
+        randomNumber=randomBetween0andX(255);
+        vector_pixeles[i+2]=randomNumber;
+    }
     return 0;
 }
+int Imagen::getImagenFromVector(vector<int> &vect){
+
+    for(int i=0; i<alto*ancho+2; i++){
+        vector_pixeles[i]= vect[i];
+    }
+    return 0;
+
+}
+
+
 
 int Imagen::procesarImagen(){
     int randomSeconds=randomBetween0andX(10);
-    //cout<<"Comenzo a procesar "<< randomSeconds<<" segundos"<<endl;
-    for (int i = 0; i < alto; i++)
-        for (int j = 0; j < ancho; j++){
-            pixeles[i][j] = procesarPixel(pixeles[i][j]);
-        }
+  
+    for (int i=0; i<alto*ancho; i++){
+        vector_pixeles[i+2]= procesarPixel(vector_pixeles[i+2]);
+    }
     sleep(randomSeconds);
-   // cout<<"Termino de procesar"<<endl;
+   
     return 0;
 }
 
 int Imagen::sumarImagen(Imagen &imagen){
     
     int suma;
-    //cout<<"Comienza la suma"<<endl;
-    for (int i = 0; i < alto; i++)
-        for (int j = 0; j < ancho; j++){
-          //  suma= pixeles[i][j] +imagen.getImagen()[i][j];
-
-            //cout<<"sumando"<< pixeles[i][j]<<" con "<<imagen.getImagen()[i][j]<<" da: "<< suma <<endl;
-            pixeles[i][j] = sumaPixeles(pixeles[i][j] ,imagen.getImagen()[i][j]);
-        }
+    vector<int> vect=imagen.getImagenVector();
   
-    //cout<<"Termina la suma"<<endl;
+    
+        for (int i=0; i<alto*ancho; i++){
+             vector_pixeles[i+2]= sumaPixeles(vector_pixeles[i+2], vect[i+2]);
+    }
+  
     return 0;
 }
 
@@ -128,10 +101,9 @@ int Imagen::sumaPixeles(int &pixel1, int &pixel2) {
 }
 int Imagen::multiplicarImagen(float valor){
 
-     for (int i = 0; i < alto; i++)
-        for (int j = 0; j < ancho; j++){
-            pixeles[i][j] *= valor;
-        }
+     for (int i=0; i<alto*ancho; i++){
+        vector_pixeles[i+2] *= valor;
+    }
         return 0;
 
 }
@@ -140,15 +112,22 @@ int Imagen::multiplicarImagen(float valor){
 int Imagen::mostrarImagen(){
 
     cout<<"Imagen"<<endl;
-    
-    for (int i = 0; i < alto; i++){
-     //cout<<"i vale"<<i<<endl;
-        for (int j = 0; j < ancho; j++){
-         //   cout<<"j vale"<<j<<endl;
-            cout<<" "<<pixeles[i][j]<<" "; 
-        }
-        cout<<endl;
+
+    int j=0;
+     for (int i = 0; i < alto*ancho; i++){
+         
+         if(j>=ancho){
+              cout<<endl;
+              j=0;
+
+         }
+           //cout<<"j vale"<<j<<endl;
+            cout<<" "<<vector_pixeles[i+2]<<" "; 
+            j++;
+         
     }
+       
+    cout<<endl;
     return 0;
 }
 
@@ -161,12 +140,6 @@ int Imagen::randomBetween0andX(int X){
 
 Imagen::~Imagen(){
 
-       for (int i = 0; i < alto; i++)
-		delete[] pixeles[i];
-
-	    delete[] pixeles;
-        
-        //cout<<"Destructor called!!!!!"<<endl;
 
 
 }
