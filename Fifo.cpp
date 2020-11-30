@@ -48,24 +48,23 @@ void signalHandler( int signum ) {
  }
 
 int copyToFiFo( int file_descriptor, vector<int> &vector){
-
+    cout<<"entre"<<endl;
      int arrayInt[vector.size()];
     for(int i=0; i<vector.size(); i++){
         arrayInt[i]=vector.at(i);
     }
-    int num=write(file_descriptor, &arrayInt, sizeof(arrayInt)); 
-    if(num<0){
-         cout<<"Error al escribir en el pipe"<<endl;
-         return ERROR;
-    }
-
-    return OK;
+    write(file_descriptor, &arrayInt, sizeof(arrayInt)); 
+      cout<<"sali"<<endl;
+    return 0;
 } 
 
 
 vector<int> copyToVector( int* array, int tam){
+
+   
     vector<int> aux;
     for(int i=0; i<tam; i++){
+
         aux.push_back(array[i]);
     }
     return aux;
@@ -92,6 +91,7 @@ int main(int argc, const char** argv) {
     string log;
 
 
+
     if(logToFile){
         log= "Comienza el programa con " + to_string(cant) +" imagenes de " + to_string(n) + "x" +to_string(n)+ " pixeles";   ;
         logger->writeToLogFile(log);
@@ -102,8 +102,6 @@ int main(int argc, const char** argv) {
   
     // Creo el FIFO si o existe
     mkfifo(myfifo, 0666); 
-
-
 
 
 
@@ -121,8 +119,6 @@ int main(int argc, const char** argv) {
 
             // Open FIFO for write only 
             fd = open(myfifo, O_WRONLY);
-
-           fcntl(fd, F_SETPIPE_SZ, sizeof(int)*(alto*ancho + 2)*cant);
 
             int process_id= getpid();
             //seteo un semilla distinta para numero random
@@ -178,22 +174,6 @@ int main(int argc, const char** argv) {
 
     // abro FIFO para lectura 
     fd = open(myfifo, O_RDONLY);
-       long pipe_size = (long)fcntl(fd, F_GETPIPE_SZ);
-    if (pipe_size == -1) {
-        perror("get pipe size failed.");
-    }
-    printf("default pipe size: %ld\n", pipe_size);
-
-    int ret = fcntl(fd, F_SETPIPE_SZ, 1024 * 1024);
-    if (ret < 0) {
-        perror("set pipe size failed.");
-    }
-
-    pipe_size = (long)fcntl(fd, F_GETPIPE_SZ);
-    if (pipe_size == -1) {
-        perror("get pipe size 2 failed.");
-    }
-    printf("new pipe size: %ld\n", pipe_size);
     if(logToFile){
         log= "Proceso id " + to_string(parent_pid) + " :esperando a los procesos hijos que terminen";
         logger->writeToLogFile(log);
@@ -201,15 +181,12 @@ int main(int argc, const char** argv) {
     //Espero  que todos los hijos terminen
     int tam_pixeles= alto*ancho +2;
     for(int i=0; i<cant; i++){
-
         int data_in[tam_pixeles];
-
         read(fd, data_in, sizeof(data_in));
-
         vector<int> vect= copyToVector( data_in,tam_pixeles);
         Imagen imagen(ancho,alto);
         imagen.getImagenFromVector(vect);
-        cout<<"Imagen recibida!"<<endl;
+        cout<<"Imagen recibida:"<<endl;
         imagen.mostrarImagen();
         imagenes.push_back(imagen);
         wait(NULL);
